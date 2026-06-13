@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fr4meluc"
+version = "3.0.0-dev"
+description = "Educational Pentesting Framework — CLI + (próximamente) GUI empresarial"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "luchernan" }]
+dependencies = [
+    "colorama>=0.4.6",
+]
+
+[project.optional-dependencies]
+gui = ["PyQt6>=6.6", "apscheduler>=3.10"]
+dev = ["pytest>=7.0"]
+
+[project.scripts]
+fr4meluc     = "fr4meluc.cli.main:main"
+fr4meluc-gui = "fr4meluc.gui.app:run_gui"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["fr4meluc*"]
