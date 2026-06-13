@@ -5,7 +5,7 @@ from .ui import _info, _warn, _ok
 
 REQUIRED_TOOLS = [
     'ping', 'nmap', 'gobuster', 'nikto', 'searchsploit', 'arp-scan',
-    'ffuf', 'wpscan', 'hydra', 'sqlmap', 'enum4linux',
+    'ffuf', 'wpscan', 'hydra', 'sqlmap', 'enum4linux', 'john', 'nuclei',
 ]
 
 

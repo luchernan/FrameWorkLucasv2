@@ -32,11 +32,14 @@ from ..core.tools.peas import download_peas
 from ..core.tools.http_server import start_http_server_payloads
 from ..core.tools.netcat import run_netcat_listener
 from ..core.report import generate_html_report
+from ..core.report_pdf import generate_pdf_report
+from ..core.report_docx import generate_docx_report
 from ..core.db import init_db
 from ..core.storage import (
     get_or_create_client, get_or_create_project,
     create_scan, finish_scan, save_finding,
     get_project_scans, diff_scans, import_workspace,
+    get_scan,
 )
 
 
@@ -228,8 +231,10 @@ def target_menu(ip):
 
         _section("REPORTING & SALIDA", color=Fore.MAGENTA)
         _opt(16, "Compilar y Abrir Reporte HTML Maestro")
-        _opt(17, "Ver Histórico y Diff de Escaneos (DB)")
-        _opt(18, "Volver al Menu Principal")
+        _opt(17, "Generar Reporte PDF Profesional")
+        _opt(18, "Generar Reporte DOCX Profesional")
+        _opt(19, "Ver Histórico y Diff de Escaneos (DB)")
+        _opt(20, "Volver al Menu Principal")
 
         print()
         _line("─")
@@ -291,11 +296,23 @@ def target_menu(ip):
         elif opcion == '16':
             generate_html_report(ip, active_domain, workspace_dir)
         elif opcion == '17':
+            path = generate_pdf_report(scan_id, workspace_dir, ip)
+            if path:
+                _ok(f"PDF generado: {path}")
+            else:
+                _err("Error generando PDF. ¿Está instalado WeasyPrint?")
+        elif opcion == '18':
+            path = generate_docx_report(scan_id, workspace_dir, ip)
+            if path:
+                _ok(f"DOCX generado: {path}")
+            else:
+                _err("Error generando DOCX. ¿Está instalado python-docx?")
+        elif opcion == '19':
             if project_id:
                 _show_history_and_diff(project_id)
             else:
                 _info("No hay proyecto activo. Reinicia y asocia un cliente para ver el histórico.")
-        elif opcion == '18':
+        elif opcion == '20':
             finish_scan(scan_id, status="completed")
             break
         else:
@@ -312,11 +329,44 @@ def main():
     )
     parser.add_argument("--quiet", action="store_true",
                         help="Desactiva la capa educativa (edu_print). Útil para uso profesional.")
+    parser.add_argument("--daemon", action="store_true",
+                        help="Ejecuta el daemon de scheduling en segundo plano (APScheduler).")
+    parser.add_argument("--report-pdf", type=int, metavar="SCAN_ID",
+                        help="Genera un reporte PDF para el scan_id indicado y sale.")
+    parser.add_argument("--report-docx", type=int, metavar="SCAN_ID",
+                        help="Genera un reporte DOCX para el scan_id indicado y sale.")
     args = parser.parse_args()
 
     init(autoreset=True)
     if args.quiet:
         set_educational(False)
+
+    if args.daemon:
+        from ..core.daemon import run_daemon
+        run_daemon()
+        return  # run_daemon blocks; this return is never reached normally
+
+    if args.report_pdf is not None:
+        init_db()
+        scan = get_scan(args.report_pdf)
+        if scan is None:
+            _err(f"Scan ID {args.report_pdf} no encontrado en la DB.")
+            sys.exit(1)
+        path = generate_pdf_report(args.report_pdf, scan['workspace_dir'], scan['target'])
+        if path:
+            _ok(f"PDF generado: {path}")
+        sys.exit(0)
+
+    if args.report_docx is not None:
+        init_db()
+        scan = get_scan(args.report_docx)
+        if scan is None:
+            _err(f"Scan ID {args.report_docx} no encontrado en la DB.")
+            sys.exit(1)
+        path = generate_docx_report(args.report_docx, scan['workspace_dir'], scan['target'])
+        if path:
+            _ok(f"DOCX generado: {path}")
+        sys.exit(0)
 
     init_db()
 

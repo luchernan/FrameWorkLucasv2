@@ -202,3 +202,137 @@ def import_workspace(workspace_dir: str,
 
     finish_scan(scan_id, status="imported")
     return scan_id
+
+
+# ─────────────────────────────────────────────────────────────
+#  SCHEDULER JOBS
+# ─────────────────────────────────────────────────────────────
+
+def list_scheduler_jobs(enabled_only: bool = True) -> list:
+    """Devuelve los jobs del scheduler, opcionalmente solo los habilitados.
+
+    Args:
+        enabled_only: si True, filtra a enabled = 1.
+
+    Returns:
+        Lista de dicts (una fila por job), ordenada por id.
+    """
+    with get_connection() as conn:
+        if enabled_only:
+            rows = conn.execute(
+                "SELECT * FROM scheduler_jobs WHERE enabled = 1 ORDER BY id"
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT * FROM scheduler_jobs ORDER BY id"
+            ).fetchall()
+        return [dict(r) for r in rows]
+
+
+def update_job_last_run(job_id: int) -> None:
+    """Marca last_run = ahora para el job indicado."""
+    with get_connection() as conn:
+        conn.execute(
+            "UPDATE scheduler_jobs SET last_run = ? WHERE id = ?",
+            (datetime.now().isoformat(sep=" ", timespec="seconds"), job_id),
+        )
+
+
+# ─────────────────────────────────────────────────────────────
+#  FINISH + NOTIFY (nueva función — NO modifica finish_scan)
+# ─────────────────────────────────────────────────────────────
+
+_SETTINGS_FILE = "fr4meluc_settings.json"
+
+
+def _load_settings() -> dict:
+    """Carga la configuración de integraciones desde fr4meluc_settings.json.
+
+    Devuelve {} si el archivo no existe o no es JSON válido. Nunca lanza.
+    """
+    import json
+
+    try:
+        with open(_SETTINGS_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return data if isinstance(data, dict) else {}
+    except FileNotFoundError:
+        return {}
+    except (ValueError, OSError):
+        return {}
+
+
+def finish_scan_with_notify(scan_id: int, settings: dict | None = None,
+                            status: str = "completed", notes: str = "") -> None:
+    """Cierra un escaneo y dispara todas las integraciones habilitadas.
+
+    No modifica finish_scan: la llama y luego notifica. Las integraciones se
+    importan de forma perezosa para evitar imports circulares (integrations
+    no debe arrastrarse al cargar storage).
+
+    Cada integración se invoca solo si su clave de configuración está presente
+    en `settings`. Ningún fallo de integración interrumpe el resto.
+
+    Args:
+        scan_id: escaneo a cerrar.
+        settings: dict de configuración; si es None se carga del archivo.
+        status: estado final del scan.
+        notes: notas a persistir en el scan.
+    """
+    import sys
+
+    # 1. Cerrar el scan primero (comportamiento idéntico al flujo existente).
+    finish_scan(scan_id, status=status, notes=notes)
+
+    # 4. Cargar settings del archivo si no se pasaron.
+    if settings is None:
+        settings = _load_settings()
+    settings = settings or {}
+
+    # 2. + 3. Construir el resumen y contar severidades a partir de los findings.
+    scan = get_scan(scan_id)
+    if scan is None:
+        sys.stderr.write(f"[notify] scan_id {scan_id} no existe; se omite notificación.\n")
+        return
+
+    findings = get_scan_findings(scan_id)
+    critical_count = sum(1 for f in findings if str(f.get("severity", "")).lower() == "critical")
+    high_count = sum(1 for f in findings if str(f.get("severity", "")).lower() == "high")
+
+    scan_summary = {
+        "scan_id": scan_id,
+        "target": scan.get("target"),
+        "status": scan.get("status", status),
+        "findings_count": len(findings),
+        "critical_count": critical_count,
+        "high_count": high_count,
+    }
+
+    # 5. Disparar integraciones según las claves presentes. Imports perezosos.
+    if settings.get("slack_webhook"):
+        try:
+            from .integrations.slack import notify_slack
+            notify_slack(scan_summary, settings)
+        except Exception as exc:  # noqa: BLE001 — una integración no debe romper el cierre
+            sys.stderr.write(f"[notify] Slack falló: {exc}\n")
+
+    if settings.get("teams_webhook"):
+        try:
+            from .integrations.teams import notify_teams
+            notify_teams(scan_summary, settings)
+        except Exception as exc:  # noqa: BLE001
+            sys.stderr.write(f"[notify] Teams falló: {exc}\n")
+
+    if settings.get("webhook_url"):
+        try:
+            from .integrations.webhook import notify_webhook
+            notify_webhook(scan_summary, settings)
+        except Exception as exc:  # noqa: BLE001
+            sys.stderr.write(f"[notify] Webhook falló: {exc}\n")
+
+    if all(settings.get(k) for k in ("jira_url", "jira_user", "jira_token", "jira_project")):
+        try:
+            from .integrations.jira import create_jira_issues
+            create_jira_issues(findings, settings, scan_summary)
+        except Exception as exc:  # noqa: BLE001
+            sys.stderr.write(f"[notify] Jira falló: {exc}\n")

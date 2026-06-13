@@ -1,0 +1,19 @@
+[Unit]
+Description=Fr4meLuc Enterprise Scheduling Daemon
+Documentation=https://github.com/luchernan/fr4meluc
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/fr4meluc
+ExecStart=/usr/bin/fr4meluc --daemon
+Restart=on-failure
+RestartSec=10s
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=fr4meluc-daemon
+
+[Install]
+WantedBy=multi-user.target

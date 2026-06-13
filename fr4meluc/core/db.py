@@ -77,4 +77,16 @@ def init_db() -> None:
             type        TEXT DEFAULT 'ip',
             notes       TEXT
         );
+
+        CREATE TABLE IF NOT EXISTS scheduler_jobs (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            project_id  INTEGER REFERENCES projects(id),
+            name        TEXT NOT NULL,
+            targets     TEXT NOT NULL,
+            profile     TEXT DEFAULT 'auto',
+            cron_expr   TEXT NOT NULL,
+            enabled     INTEGER DEFAULT 1,
+            last_run    TEXT,
+            created_at  TEXT DEFAULT (datetime('now'))
+        );
         """)

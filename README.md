@@ -1,225 +1,49 @@
-# Fr4meLuc — Framework Educativo de Pentesting
+# Fr4meLuc Enterprise v3.0
 
-![Python](https://img.shields.io/badge/Python-3.8%2B-blue?logo=python)
+![Python](https://img.shields.io/badge/Python-3.9%2B-blue?logo=python)
 ![Plataforma](https://img.shields.io/badge/Plataforma-Kali%20Linux-557C94?logo=linux)
 ![Licencia](https://img.shields.io/badge/Licencia-MIT-green)
-![Estado](https://img.shields.io/badge/Estado-Activo-brightgreen)
+![Tests](https://img.shields.io/badge/Tests-21%20passed-brightgreen)
+![Estado](https://img.shields.io/badge/Estado-v3.0%20Enterprise-blue)
 
-> **Un framework educativo de pentesting interactivo por CLI para entornos de laboratorio controlados.**  
-> Diseñado para jugadores de CTF, estudiantes de ciberseguridad y aprendices de red team.
-
----
-
-## ¿Qué es esto?
-
-`motor.py` es un script de Python completamente interactivo que **orquesta herramientas estándar de pruebas de penetración** a través de un menú estructurado por fases, explicando qué hace cada herramienta y por qué se usa.
-
-No es solo un script. Es un **compañero de aprendizaje** para laboratorios de hacking ético.
+> **Framework de pentesting empresarial con CLI interactivo, GUI PyQt6, automatización por pipeline, reportes PDF/DOCX y daemon de scheduling.**  
+> Diseñado para auditores profesionales, equipos de red team y entornos CTF autorizados.
 
 ```
    ███████╗██████╗ ██╗  ██╗███╗   ███╗███████╗██╗      ██╗   ██╗ ██████╗
    ██╔════╝██╔══██╗██║  ██║████╗ ████║██╔════╝██║      ██║   ██║██╔════╝
-   █████╗  ██████╔╝███████║██╔████╔██║█████╗  ██║      ██║   ██║██║     
-   ██╔══╝  ██╔══██╗╚════██║██║╚██╔╝██║██╔══╝  ██║      ██║   ██║██║     
+   █████╗  ██████╔╝███████║██╔████╔██║█████╗  ██║      ██║   ██║██║
+   ██╔══╝  ██╔══██╗╚════██║██║╚██╔╝██║██╔══╝  ██║      ██║   ██║██║
    ██║     ██║  ██║     ██║██║ ╚═╝ ██║███████╗███████╗ ╚██████╔╝╚██████╗
    ╚═╝     ╚═╝  ╚═╝     ╚═╝╚═╝     ╚═╝╚══════╝╚══════╝  ╚═════╝  ╚═════╝
-  ═══════════════════  Fr4meLuc  v2.0  |  Linux Only  ═══════════════════
+  ══════════════════  Fr4meLuc Enterprise  v3.0  |  Kali Linux  ══════════
 ```
 
 ---
 
-## Funcionalidades detalladas
+## Instalación rápida
 
-### FASE 1 — Reconocimiento y Descubrimiento
+### Opción A — pip (recomendado para desarrollo)
 
-#### ARP-Scan — Descubrimiento de red local
-- Lista **todas las interfaces de red** disponibles en la máquina y permite elegir una.
-- Lanza `arp-scan` sobre la interfaz seleccionada para descubrir hosts activos en la red local.
-- Muestra IP, dirección MAC y fabricante de cada dispositivo encontrado.
-
-#### Fingerprint de SO por Ping TTL
-- Envía un `ping` al objetivo y analiza el valor **TTL** de la respuesta.
-- Deduce el sistema operativo probable:
-  - TTL ≈ 64 → **Linux / Unix**
-  - TTL ≈ 128 → **Windows**
-  - TTL ≈ 255 → **Cisco / routers**
-- Guarda el resultado en el workspace del objetivo.
-
-#### Escaneo de Puertos con Nmap — Dos Fases (estilo OSCP)
-
-El escaneo de Nmap se realiza en **dos fases encadenadas automáticamente**:
-
-1. **Fase rápida** — Escanea los 65535 puertos (`-p-`) con velocidades configurables:
-   - **T4 (Rápido/Ruidoso):** Optimizado para laboratorios, más veloz.
-   - **T2 (Lento/Sigiloso):** Menos detectable por IDS/firewall.
-2. **Fase profunda** — Sobre los puertos abiertos detectados, lanza `-sC -sV` para identificar servicios, versiones y ejecutar scripts de detección.
-
-**Detección automática de dominio y VHost:**
-- Analiza la salida de Nmap en busca de menciones a dominios mediante varias heurísticas:
-  - Redirecciones HTTP: `Did not follow redirect to http://maquina.htb/`
-  - Certificados SSL/TLS: `Subject Alternative Name: DNS:maquina.htb`
-- Si detecta un dominio, **ofrece automáticamente inyectarlo en `/etc/hosts`** para que todas las herramientas puedan resolverlo.
-- El dominio queda activo en la sesión como **VHost** y se muestra en la barra de estado del panel.
-
-#### Enum4Linux — Reconocimiento de entornos Windows/SMB
-- Enumera usuarios, grupos, shares, políticas de contraseñas y dominios en redes Active Directory.
-- Ideal para máquinas Windows o entornos con Samba.
-
----
-
-### FASE 2 — Enumeración Web
-
-> Las herramientas web se activan automáticamente en HTTP o HTTPS según lo detectado por Nmap.
-
-#### Gobuster — Enumeración de directorios y rutas
-- Realiza fuerza bruta de rutas sobre el servidor web objetivo.
-- Usa el diccionario `directory-list-2.3-medium.txt` por defecto (configurable).
-- Muestra un **spinner animado** con tiempo transcurrido en tiempo real.
-- Guarda los resultados en `workspace/web/gobuster_directorios.txt`.
-
-#### FFuF — Descubrimiento de subdominios virtuales (VHost fuzzing)
-
-Esta es una de las funcionalidades más avanzadas del framework:
-
-- Requiere un **dominio activo** (detectado por Nmap o configurado manualmente).
-- Envía miles de peticiones HTTP modificando la cabecera `Host: FUZZ.dominio.htb` con cada palabra del diccionario.
-- Permite hallar paneles ocultos en el mismo servidor como:
-  - `admin.maquina.htb`
-  - `ftp.maquina.htb`
-  - `dev.maquina.htb`
-- Filtra automáticamente redirecciones y falsos positivos (`-fc 301,302,400`).
-- Guarda los resultados en formato JSON para su integración en el informe HTML.
-- Muestra un **spinner animado** durante la ejecución.
-
-#### WPScan — Scanner de WordPress
-- Actualiza su base de datos antes de escanear.
-- Detecta vulnerabilidades, plugins desactualizados, usuarios y temas en sites WordPress.
-
-#### SQLMap — Inyección SQL automatizada
-- Solicita la URL objetivo con el parámetro vulnerable.
-- Ejecuta detección y extracción automática de bases de datos.
-
-#### Nuclei — Scanner de CVEs modernos
-- Usa plantillas actualizadas de la comunidad para detectar vulnerabilidades conocidas (CVEs).
-- Clasifica los hallazgos por **severidad** (critical, high, medium, low, info).
-- Guarda resultados en JSON para el informe HTML con código de colores.
-- Muestra un **spinner animado** durante la ejecución.
-
-#### Nikto — Vulnerabilidades web clásicas
-- Detecta cabeceras inseguras, configuraciones por defecto, archivos sensibles expuestos, etc.
-- Muestra un **spinner animado** durante la ejecución.
-- Guarda los resultados en `workspace/web/nikto_resultados.txt`.
-
----
-
-### FASE 3 — Explotación y Post-Explotación
-
-#### SearchSploit — Búsqueda automática de exploits públicos
-- Lee automáticamente el XML generado por Nmap.
-- Extrae **servicios y versiones** detectadas y lanza búsquedas en la base de datos de Exploit-DB.
-- Muestra los exploits disponibles para cada servicio identificado.
-
-#### Hydra — Fuerza bruta de autenticación
-- Soporta protocolos **SSH** y **FTP**.
-- Permite especificar usuario, diccionario de contraseñas y número de hilos paralelos.
-- Guarda los resultados en `workspace/exploits/hydra_ssh_bruteforce.txt`.
-
-#### Cracking de Hashes Offline (John The Ripper)
-- Permite introducir directamente un hash encontrado en la víctima (ej. hash de `/etc/shadow` o volcados de BD).
-- Lanza automáticamente **John The Ripper** contra el hash usando el diccionario indicado (por defecto `rockyou.txt`).
-- Descifra la contraseña offline sin interactuar más con el objetivo.
-
-#### Descarga automática de PEAS (Escalada de Privilegios)
-- Descarga la última versión oficial de **LinPEAS** (Linux) y **WinPEAS** (Windows) directamente desde GitHub.
-- Los guarda automáticamente en la carpeta `workspace/payloads`, dejándolos listos para ser transferidos a la víctima mediante el Servidor HTTP.
-
-#### Servidor HTTP de transferencia de payloads
-- Levanta un servidor HTTP temporal en la máquina local.
-- Permite transferir archivos (LinPEAS, scripts, payloads) al objetivo de forma sencilla usando `wget` o `curl` desde la víctima.
-
-#### Netcat — Listener para Reverse Shell
-- Abre un puerto de escucha local con `nc -lvnp`.
-- Permite recibir conexiones de reverse shell una vez ejecutado un payload en el objetivo.
-- El listener se cierra automáticamente cuando finaliza la conexión.
-
----
-
-### Reporting
-
-#### Informe HTML automático
-Generado tras cualquier sesión de escaneo con un solo comando. Contiene:
-
-- **Dashboard de estadísticas** — puertos abiertos, hallazgos de Nuclei, subdominios de FFuF
-- **Tabla de puertos** desde el XML de Nmap (servicio, versión, estado)
-- **Tabla de CVEs** desde el JSON de Nuclei (código de colores por severidad: rojo=crítico, naranja=alto...)
-- **Tabla de subdominios** desde el JSON de FFuF
-- **Volcados de logs** completos de cada herramienta ejecutada
-- Se abre automáticamente en el navegador al generarse.
-
----
-
-## Barra de estado del panel
-
-El panel de ataque muestra en todo momento el estado de la sesión:
-
-```
- Estado > [OK] Nmap   [OK] Web (http)   [OK] VHost (maquina.htb)
- Workspace: workspace_10_0_2_7/
-```
-
-| Indicador | Significado |
-|-----------|-------------|
-| `[OK] Nmap` | Nmap ejecutado, puertos y servicios conocidos |
-| `[OK] Web (http/https)` | Protocolo web detectado automáticamente |
-| `[OK] VHost (dominio)` | Dominio activo en la sesión, inyectado en `/etc/hosts` |
-
----
-
-## Instalación
-
-### Sistema (Kali Linux / Debian)
-
-**1. Da permisos de ejecución al instalador:**
 ```bash
-sudo chmod +x install.sh
+git clone https://github.com/luchernan/FrameWorkLucasv2
+cd FrameWorkLucasv2
+pip install -e ".[gui]"
+pip install weasyprint python-docx
 ```
 
-**2. Ejecuta el instalador con privilegios de superusuario:**
+### Opción B — paquete .deb (instalación global en Kali)
+
 ```bash
-sudo ./install.sh
+./build_deb.sh
+sudo dpkg -i fr4meluc_3.0.0_all.deb
 ```
 
-O manualmente:
+### Herramientas del sistema
+
 ```bash
-sudo apt install nmap gobuster nikto ffuf wpscan hydra sqlmap enum4linux exploitdb netcat-traditional arp-scan nuclei
-```
-
-### Python — Entorno Virtual
-
-Se recomienda usar un entorno virtual para aislar las dependencias del proyecto.
-
-**1. Crea el entorno virtual:**
-```bash
-python3 -m venv venv
-```
-
-**2. Activa el entorno virtual:**
-```bash
-# En Linux / macOS:
-source venv/bin/activate
-
-# En Windows (PowerShell):
-.\venv\Scripts\Activate.ps1
-```
-
-**3. Instala las dependencias de Python:**
-```bash
-pip install -r requirements.txt
-```
-
-**4. Para desactivar el entorno virtual cuando termines:**
-```bash
-deactivate
+sudo apt install -y nmap gobuster nikto ffuf wpscan hydra sqlmap \
+  enum4linux exploitdb netcat-traditional arp-scan john nuclei
 ```
 
 ---
@@ -227,49 +51,184 @@ deactivate
 ## Uso
 
 ```bash
-# Clona el repositorio
-git clone https://github.com/luchernan/FrameWorkLucas
+# CLI interactivo (modo clásico)
+sudo fr4meluc
 
-# Entra en el directorio del proyecto
-cd FrameWorkLucas/
+# CLI silencioso — sin capa educativa
+sudo fr4meluc --quiet
 
-# Da permisos de ejecución al script de instalación (solo la primera vez)
-sudo chmod +x install.sh
+# Generar reporte PDF de un escaneo existente
+fr4meluc --report-pdf <scan_id>
 
-# Instala todas las dependencias del sistema
-sudo ./install.sh
+# Generar reporte DOCX
+fr4meluc --report-docx <scan_id>
 
-# Crea y activa el entorno virtual de Python
-python3 -m venv venv
-source venv/bin/activate
+# Daemon de scheduling (APScheduler)
+fr4meluc --daemon
 
-# Instala las dependencias de Python
-pip install -r requirements.txt
+# GUI empresarial (requiere display X11)
+fr4meluc-gui
 
-# Ejecuta el framework
+# Compatibilidad con versiones anteriores
 sudo python3 motor.py
 ```
 
 ---
 
-## Estructura de salida
+## Qué hay en v3.0
 
-Cada objetivo crea automáticamente un espacio de trabajo organizado:
+### Fase 0 — Refactor completo
+`motor.py` (1700 líneas) troceado en módulos independientes. `motor.py` sigue funcionando como shim de compatibilidad.
 
 ```
-workspace_10_0_2_7/
+fr4meluc/
+├── core/           → lógica pura (runner, parsers, db, storage, pipeline, parallel, daemon)
+│   ├── tools/      → 1 wrapper por herramienta (nmap, gobuster, ffuf, nuclei…)
+│   └── integrations/ → Slack, Teams, Jira, webhook
+├── cli/main.py     → CLI interactivo completo
+└── gui/            → GUI PyQt6 enterprise (6 vistas)
+    └── views/      → dashboard, clients, scan_wizard, history, scheduler, settings
+```
+
+### Fase 1 — Persistencia SQLite
+Base de datos `fr4meluc.db` (creada en el directorio de trabajo):
+
+| Tabla | Contenido |
+|---|---|
+| `clients` | Empresas / clientes auditados |
+| `projects` | Campañas de auditoría |
+| `scans` | Ejecuciones del framework |
+| `findings` | Hallazgos individuales (puerto, CVE, directorio…) |
+| `scheduler_jobs` | Jobs de scheduling con expresión cron |
+
+### Fase 2 — GUI PyQt6 Enterprise
+Dark theme profesional con 6 vistas:
+- **Dashboard** — KPIs: escaneos activos, hallazgos totales, distribución por severidad
+- **Clientes** — CRUD de clientes y proyectos
+- **Scan Wizard** — asistente de escaneo con perfiles (Quick / Web Full / AD / Personalizado), multi-target con CSV, terminal live
+- **Historial** — diff visual entre escaneos del mismo proyecto
+- **Scheduler** — jobs cron con APScheduler
+- **Settings** — Slack / Teams / Jira / webhook / datos corporativos para reportes
+
+### Fase 3 — Automatización empresarial
+
+#### Pipeline condicional (`core/pipeline.py`)
+Motor data-driven: `RULES = [(condition_fn, action_fn, name), ...]`. Sin if/elif.
+
+| Condición | Acción automática |
+|---|---|
+| Puerto 80/443 abierto **o** servicio HTTP (cualquier puerto) | gobuster dir + nuclei |
+| Puerto 445 abierto | enum4linux |
+| Servicio/versión contiene "wordpress" | wpscan |
+
+```bash
+# Añadir una regla nueva = añadir una tupla a RULES. El bucle no cambia.
+```
+
+#### Multi-target paralelo (`core/parallel.py`)
+```python
+from fr4meluc.core.parallel import run_parallel
+
+scan_ids = run_parallel(
+    targets=['10.0.0.1', '10.0.0.2', '10.0.0.3'],
+    project_id=1,
+    profile='auto',
+    max_workers=4,   # ThreadPoolExecutor
+)
+```
+Aislamiento por worker: un target fallido no aborta los demás.
+
+#### Daemon APScheduler (`fr4meluc --daemon`)
+Lee jobs de `scheduler_jobs` en la DB y los ejecuta según expresión cron. Logging estructurado JSON con rotación:
+```json
+{"ts":"2026-06-13T20:05:17.734Z","level":"INFO","msg":"Fr4meLuc daemon started. 2 jobs loaded."}
+```
+Unidad systemd incluida: `fr4meluc-daemon.service`.
+
+#### Integraciones (`core/integrations/`)
+Se disparan automáticamente al finalizar un escaneo si están configuradas en `fr4meluc_settings.json`:
+
+| Integración | Activación |
+|---|---|
+| Slack | `slack_webhook` presente |
+| Microsoft Teams | `teams_webhook` presente |
+| Jira | `jira_url` + `jira_user` + `jira_token` + `jira_project` presentes |
+| Webhook genérico | `webhook_url` presente |
+
+Jira crea un issue por cada finding con severidad `critical` o `high`.
+
+### Fase 4 — Reportes profesionales
+
+Menú opciones 16/17/18 o flags CLI:
+
+| Formato | Comando menú | Flag CLI |
+|---|---|---|
+| HTML (dashboard) | Opción 16 | — |
+| **PDF** (WeasyPrint) | Opción 17 | `--report-pdf <scan_id>` |
+| **DOCX** (python-docx) | Opción 18 | `--report-docx <scan_id>` |
+
+Secciones en PDF y DOCX:
+1. **Portada corporativa** — logo (base64), empresa, auditor, fecha, "CONFIDENCIAL"
+2. **Resumen ejecutivo** — `RIESGO GLOBAL: CRÍTICO / ALTO / MEDIO / BAJO / INFO`
+3. **Tabla de hallazgos** — ordenada critical→info, CVSS aproximado
+4. **Recomendaciones** — guía de remediación por severidad (24h / 72h / 30d / 90d)
+5. **Alcance y disclaimer** — punto-en-tiempo, sin garantía de seguridad total
+6. **Anexos** — logs .txt del workspace
+
+Configuración en `fr4meluc_settings.json`:
+```json
+{
+  "company_name": "Acme Security S.L.",
+  "company_logo": "/path/to/logo.png",
+  "auditor_name": "John Doe",
+  "auditor_email": "john@acme.com",
+  "report_footer": "© 2026 Acme Security. Confidencial."
+}
+```
+
+### Fase 6 — Hardening y empaquetado
+
+```bash
+# Tests unitarios (21 tests, ~0.16s)
+pytest tests/ -v
+
+# Construir .deb
+./build_deb.sh
+sudo dpkg -i fr4meluc_3.0.0_all.deb
+
+# Daemon como servicio systemd
+sudo cp fr4meluc-daemon.service /lib/systemd/system/
+sudo systemctl enable fr4meluc-daemon
+sudo systemctl start fr4meluc-daemon
+sudo journalctl -u fr4meluc-daemon -f
+```
+
+---
+
+## Workspace por objetivo
+
+```
+workspace_10_0_0_1/
 ├── nmap/
-│   ├── nmap.xml                        ← Usado por SearchSploit y el informe HTML
+│   ├── nmap.xml                  ← parseado por pipeline + reportes
 │   └── escaneo_principal.txt
 ├── web/
-│   ├── gobuster_directorios.txt
-│   ├── nuclei.json                     ← CVEs con severidad para el informe
+│   ├── gobuster_auto.txt         ← pipeline automático
+│   ├── nuclei_auto.json          ← pipeline automático
+│   ├── gobuster_directorios.txt  ← modo manual
+│   ├── nuclei.json
 │   ├── nikto_resultados.txt
-│   ├── ffuf_subdominios_maquina_htb.txt
-│   └── ffuf_maquina_htb.json           ← Subdominios para el informe HTML
+│   ├── wpscan_auto.txt
+│   └── ffuf_*.json
+├── smb/
+│   └── enum4linux_auto.txt       ← pipeline automático
 ├── exploits/
 │   └── hydra_ssh_bruteforce.txt
-└── report_10_0_2_7_<timestamp>.html    ← Dashboard HTML final
+├── payloads/
+│   └── linpeas.sh
+├── Reporte_Pentest_10_0_0_1.html
+├── Reporte_Pentest_10_0_0_1.pdf  ← nuevo en v3.0
+└── Reporte_Pentest_10_0_0_1.docx ← nuevo en v3.0
 ```
 
 ---
@@ -277,39 +236,66 @@ workspace_10_0_2_7/
 ## Flujo de trabajo recomendado
 
 ```
-1. ARP-Scan → descubrir IPs en la red
-2. Seleccionar objetivo → se crea el workspace
-3. Ping TTL → identificar SO
-4. Nmap (2 fases) → puertos, servicios, dominio automático
-       └── Si detecta dominio → lo inyecta en /etc/hosts automáticamente
-5. Gobuster → enumerar rutas web
-6. FFuF → descubrir subdominios virtuales (requiere dominio activo)
-7. Nuclei + Nikto → escanear vulnerabilidades web
-8. SearchSploit → buscar exploits para los servicios encontrados
-9. Hydra → fuerza bruta si hay credenciales que probar
-10. Netcat listener → esperar reverse shell
-11. Servidor HTTP → transferir herramientas al objetivo
-12. Informe HTML → documentar toda la sesión
+Modo manual (CLI interactivo):
+  1. ARP-Scan → descubrir IPs en la red
+  2. Seleccionar objetivo → crea workspace + registro en DB
+  3. Ping TTL → identificar SO
+  4. Nmap 2 fases → puertos, servicios, dominio automático (/etc/hosts)
+  5. Gobuster + Nuclei + Nikto → enumeración web
+  6. FFuF → subdominios virtuales (requiere dominio)
+  7. WPScan → si WordPress detectado
+  8. SearchSploit → exploits por servicio
+  9. Hydra → fuerza bruta SSH/FTP
+  10. Opción 17/18 → PDF o DOCX entregable
+
+Modo automático (pipeline + daemon):
+  1. Configurar job en scheduler (GUI → Scheduler o INSERT en scheduler_jobs)
+  2. fr4meluc --daemon
+  3. [pipeline dispara gobuster+nuclei/enum4linux/wpscan según puertos]
+  4. [integración envía Slack/Jira al terminar]
+  5. fr4meluc --report-pdf <scan_id>
 ```
 
 ---
 
-## Aviso Legal
+## Herramientas verificadas al arranque
 
-> ⚠️ **Esta herramienta está diseñada EXCLUSIVAMENTE para uso educativo en entornos controlados:**  
-> CTFs, máquinas virtuales propias, HackTheBox, TryHackMe o redes de laboratorio autorizadas.  
+`nmap` · `gobuster` · `nikto` · `ffuf` · `wpscan` · `hydra` · `sqlmap` · `enum4linux` · `searchsploit` · `arp-scan` · `ping` · `john` · `nuclei`
+
+---
+
+## Tests
+
+```
+tests/
+├── test_parsers.py   → extract_domains, parse_nmap, parse_nuclei (7 tests)
+├── test_storage.py   → CRUD, diff_scans, scheduler_jobs (6 tests, DB aislada)
+└── test_pipeline.py  → condiciones + run_pipeline con run_cmd mockeado (8 tests)
+```
+
+```bash
+pytest tests/ -v
+# 21 passed in 0.16s
+```
+
+---
+
+## Aviso legal
+
+> ⚠️ **Herramienta diseñada EXCLUSIVAMENTE para uso en entornos autorizados:**  
+> CTFs, máquinas virtuales propias, HackTheBox, TryHackMe, redes de laboratorio con permiso explícito.  
 >  
-> **Usar esta herramienta contra sistemas que no son de tu propiedad o para los que no tienes permiso escrito explícito es ilegal** y puede acarrear consecuencias penales.  
->  
-> El autor no asume ninguna responsabilidad por el mal uso de esta herramienta.
+> **Usar esta herramienta contra sistemas sin autorización escrita es ilegal.**  
+> El autor no asume responsabilidad por uso indebido.
 
 ---
 
 ## Probado en
-- Kali Linux 2024.x
+
+- Kali Linux 2024.x / 2025.x
 - Metasploitable 2/3
-- Máquinas de HackTheBox / TryHackMe
-- Configuraciones personalizadas con DVWA en Docker
+- HackTheBox / TryHackMe
+- DVWA en Docker
 
 ---
 
